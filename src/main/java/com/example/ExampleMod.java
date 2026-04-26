@@ -1,24 +1,49 @@
-package com.example;
+package net.fabricmc.example;
 
-import net.fabricmc.api.ModInitializer;
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.minecraft.client.gui.screen.ingame.MerchantScreen;
+import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.enchantment.Enchantments;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.village.TradeOffer;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.Map;
 
-public class ExampleMod implements ModInitializer {
-	public static final String MOD_ID = "modid";
+public class ExampleMod implements ClientModInitializer {
 
-	// This logger is used to write text to the console and the log file.
-	// It is considered best practice to use your mod id as the logger's name.
-	// That way, it's clear which mod wrote info, warnings, and errors.
-	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+    @Override
+    public void onInitializeClient() {
 
-	@Override
-	public void onInitialize() {
-		// This code runs as soon as Minecraft is in a mod-load-ready state.
-		// However, some things (like resources) may still be uninitialized.
-		// Proceed with mild caution.
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (client.player == null) return;
 
-		LOGGER.info("Hello Fabric world!");
-	}
+            if (client.currentScreen instanceof MerchantScreen screen) {
+                var handler = screen.getScreenHandler();
+                var offers = handler.getRecipes();
+
+                for (int i = 0; i < offers.size(); i++) {
+                    TradeOffer offer = offers.get(i);
+                    ItemStack result = offer.getSellItem();
+
+                    if (result.getItem() == Items.ENCHANTED_BOOK) {
+
+                        Map<?, Integer> enchants = EnchantmentHelper.get(result);
+
+                        if (enchants.containsKey(Enchantments.UNBREAKING)
+                                && enchants.get(Enchantments.UNBREAKING) == 3) {
+
+                            while (!offer.isDisabled()) {
+                                client.interactionManager.clickButton(
+                                        handler.syncId,
+                                        i
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
 }
